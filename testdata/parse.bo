@@ -1,0 +1,4 @@
+fn foo['a, T](bar: &'a T) -> i32 {
+    let a = baf(bar);
+    a
+}

@@ -1,0 +1,8 @@
+[[parser]]
+l_file = "src/boring.l"
+y_file = "src/boring.y"
+extension = ".bo"
+
+[[tests]]
+dir = "testdata"
+pass = true
