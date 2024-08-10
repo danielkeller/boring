@@ -1,42 +1,40 @@
-use bumpalo::collections::Vec;
-
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Module<'a> {
-    pub items: Vec<'a, Item<'a>>,
+    pub items: &'a [Item<'a>],
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Item<'a> {
     pub name: &'a str,
-    pub ty_params: Vec<'a, TyParam<'a>>,
-    pub params: Vec<'a, Param<'a>>,
+    pub ty_params: &'a [TyParam<'a>],
+    pub params: &'a [Param<'a>],
     pub ret_ty: Type<'a>,
     pub body: Expr<'a>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Param<'a> {
     pub name: &'a str,
     pub ty: Type<'a>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum TyParam<'a> {
     Lifetime(&'a str),
     Type(&'a str),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Type<'a> {
     Ref { lifetime: &'a str, ty: &'a Type<'a> },
     Named(&'a str),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Expr<'a> {
     Unit,
-    Block(Vec<'a, Expr<'a>>),
+    Block { body: &'a [Expr<'a>], result: Option<&'a Expr<'a>> },
     Let { name: &'a str, init: &'a Expr<'a> },
     Var(&'a str),
-    App { func: &'a Expr<'a>, args: Vec<'a, Expr<'a>> },
+    App { func: &'a Expr<'a>, args: &'a [Expr<'a>] },
 }

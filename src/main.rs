@@ -1,4 +1,7 @@
+#![allow(dead_code)]
 mod ast;
+mod ir;
+mod lower;
 
 use lrlex::lrlex_mod;
 use lrpar::lrpar_mod;
@@ -16,6 +19,8 @@ fn main() {
     for e in errs {
         println!("{}", e.pp(&lexer, &boring_y::token_epp));
     }
-    let res = res.unwrap();
-    println!("{res:?}");
+    let ast = res.unwrap();
+    println!("{ast:?}");
+    let ir = crate::lower::lower(ast, bump);
+    println!("{ir:?}");
 }
