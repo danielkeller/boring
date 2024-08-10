@@ -10,19 +10,21 @@ module -> Module<'input>
 
 fn -> Item<'input>
     : "fn" ident fn_type_params "(" params ")" return_type block {
-        Item { name: $2, params: $5, ret_ty: $7, body: $8 }
+        Item { name: $2, ty_params: $3, params: $5, ret_ty: $7, body: $8 }
     }
     ;
-fn_type_params -> ()
-    : "[" type_params "]" {}
-    | {} ;
-type_params -> ()
-    : type_param {}
-    | type_params "," type_param {}
-    | type_params "," {};
-type_param -> ()
-    : lifetime {}
-    | "identifier" {};
+fn_type_params -> Vec<'input, TyParam<'input>>
+    : "[" type_params "]" { $2 }
+    | { Vec::new_in(bump) } ;
+type_params -> Vec<'input, TyParam<'input>>
+    : type_param { vec![in bump; $1] }
+    | type_params "," type_param { $1.push($3); $1 }
+    | type_params "," { $1 }
+    ;
+type_param -> TyParam<'input>
+    : lifetime { TyParam::Lifetime($1) }
+    | ident { TyParam::Type($1) }
+    ;
 params -> Vec<'input, Param<'input>>
     : param { vec![in bump; $1] }
     | params "," param { $1.push($3); $1 }

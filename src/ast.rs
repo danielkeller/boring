@@ -8,6 +8,7 @@ pub struct Module<'a> {
 #[derive(Debug)]
 pub struct Item<'a> {
     pub name: &'a str,
+    pub ty_params: Vec<'a, TyParam<'a>>,
     pub params: Vec<'a, Param<'a>>,
     pub ret_ty: Type<'a>,
     pub body: Expr<'a>,
@@ -17,6 +18,12 @@ pub struct Item<'a> {
 pub struct Param<'a> {
     pub name: &'a str,
     pub ty: Type<'a>,
+}
+
+#[derive(Debug)]
+pub enum TyParam<'a> {
+    Lifetime(&'a str),
+    Type(&'a str),
 }
 
 #[derive(Debug)]
