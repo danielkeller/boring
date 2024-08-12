@@ -2,6 +2,7 @@
 mod ast;
 mod ir;
 mod lower;
+mod pretty;
 
 use lrlex::lrlex_mod;
 use lrpar::lrpar_mod;
@@ -20,7 +21,7 @@ fn main() {
         println!("{}", e.pp(&lexer, &boring_y::token_epp));
     }
     let ast = res.unwrap();
-    println!("{ast:?}");
+    println!("{ast}");
     let ir = crate::lower::lower(ast, bump);
-    println!("{ir:?}");
+    println!("{ir}");
 }
