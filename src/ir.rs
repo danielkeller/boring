@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Display, hash::Hash};
+use std::{fmt::Display, hash::Hash};
 
 use bumpalo::collections::Vec;
 
@@ -14,10 +14,33 @@ pub struct Item<'a> {
     pub body: Vec<'a, BB<'a>>,
 }
 
+impl Item<'_> {
+    pub fn param(&self, mut bb: usize, mut param: usize) -> Value {
+        loop {
+            if bb == self.body[bb].idom {
+                return Value(-1i32 - i32::try_from(param).unwrap());
+            }
+            bb = self.body[bb].idom;
+            param += self.body[bb].n_params;
+        }
+    }
+    pub fn instr(&self, mut bb: usize, mut instr: usize) -> Value {
+        loop {
+            if bb == self.body[bb].idom {
+                return Value(i32::try_from(instr).unwrap());
+            }
+            bb = self.body[bb].idom;
+            instr += self.body[bb].body.len();
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct BB<'a> {
+    pub n_params: usize,
     pub body: Vec<'a, Instr<'a>>,
-    pub term: Terminator,
+    pub term: Terminator<'a>,
+    pub idom: usize, // Can this be computed incrementally like this?
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -29,10 +52,19 @@ pub enum Instr<'a> {
     App { func: Value, args: &'a [Value] },
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum Terminator {
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Jmp<'a> {
+    pub to: usize,
+    pub args: &'a [Value],
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub enum Terminator<'a> {
+    #[default]
+    Halt,
     Return(Value),
-    Jmp(u32),
+    Jmp(Jmp<'a>),
+    Switch(Value, &'a [Jmp<'a>]),
 }
 
 impl Display for Module<'_> {
@@ -43,36 +75,47 @@ impl Display for Module<'_> {
         Ok(())
     }
 }
+/*
+ (\x -> (\y -> E(x, y)) Yi(x)) Xi
+ (\ -> (\ -> E(2, 1)) Yi(1)) Xi
+*/
 
 impl Display for Item<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Item { name, body } = self;
         write!(f, "fn {name} {{\n")?;
-        for (i, bb) in body.iter().enumerate() {
-            write!(f, "  _bb{i}:\n{bb}\n")?;
+        for (bb, body) in body.iter().enumerate() {
+            let params = Commas((0..body.n_params).map(|p| self.param(bb, p)));
+            write!(f, "  _bb{bb}({params}):\n")?;
+            for (i, instr) in body.body.iter().enumerate() {
+                let lhs = self.instr(bb, i);
+                write!(f, "    {lhs} = {instr};\n")?;
+            }
+            match body.term {
+                Terminator::Halt => f.write_str("    hlt;\n\n"),
+                Terminator::Return(val) => {
+                    write!(f, "    return {val};\n\n")
+                }
+                Terminator::Jmp(j) => write!(f, "    jmp {j};\n\n"),
+                Terminator::Switch(val, js) => {
+                    write!(f, "    switch {val}: {};\n\n", Commas(js))
+                }
+            }?;
         }
         f.write_str("}")
     }
 }
 
-impl Display for BB<'_> {
+impl Display for Jmp<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for (i, instr) in self.body.iter().enumerate() {
-            write!(f, "    _{i} = {instr};\n")?;
-        }
-        match self.term {
-            Terminator::Return(val) => {
-                write!(f, "    return {val};\n")
-            }
-            Terminator::Jmp(bb) => write!(f, "    jmp _bb{bb};\n"),
-        }
+        write!(f, "_bb{}({})", self.to, Commas(self.args))
     }
 }
 
 impl Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.0 < 0 {
-            write!(f, "_a{}", -self.0)
+            write!(f, "_a{}", -self.0 - 1)
         } else {
             write!(f, "_{}", self.0)
         }

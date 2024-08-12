@@ -41,6 +41,7 @@ pub enum Expr<'a> {
     Let { name: &'a str, init: &'a Expr<'a> },
     Var(&'a str),
     App { func: &'a Expr<'a>, args: &'a [Expr<'a>] },
+    If { cond: &'a Expr<'a>, yes: &'a Expr<'a>, no: Option<&'a Expr<'a>> },
 }
 
 impl Display for Module<'_> {
@@ -103,6 +104,12 @@ impl Display for Expr<'_> {
             Expr::Let { name, init } => write!(f, "let {name} = {init}"),
             Expr::Var(name) => f.write_str(name),
             Expr::App { func, args } => write!(f, "{func}({})", Commas(*args)),
+            Expr::If { cond, yes, no: None } => {
+                write!(f, "if {cond} {{\n{yes}\n}}")
+            }
+            Expr::If { cond, yes, no: Some(no) } => {
+                write!(f, "if {cond} {{\n{yes}\n}} else {{\n{no}\n}}")
+            }
         }
     }
 }

@@ -1,5 +1,13 @@
-fn foo['a, T](bar: &'a T) -> i32 {
+fn foo['a, T](bar: &'a T, i: bool) -> i32 {
     let baf = ();
-    let a = baf(bar);
-    a
+    if i {
+        let a = baf(bar);
+        if a {
+            let baz = ();
+            baz(baf);
+        }
+        a()
+    } else {
+        ()
+    }
 }

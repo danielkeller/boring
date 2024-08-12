@@ -1,6 +1,8 @@
 %%
 fn "fn"
 let "let"
+if "if"
+else "else"
 \( "("
 \) ")"
 \{ "{"
