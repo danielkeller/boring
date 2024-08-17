@@ -12,15 +12,15 @@ pub fn lower<'a>(
 
 #[derive(Debug, Default)]
 struct Env<'e, 'a> {
-    items: HashMap<&'a str, ir::Value<'a>>,
+    items: HashMap<&'a str, ir::Value>,
     parent: Option<&'e Env<'e, 'a>>,
 }
 
 impl<'e, 'a> Env<'e, 'a> {
-    fn insert(&mut self, name: &'a str, value: ir::Value<'a>) {
+    fn insert(&mut self, name: &'a str, value: ir::Value) {
         self.items.insert(name, value);
     }
-    fn get(&self, name: &'a str) -> Option<ir::Value<'a>> {
+    fn get(&self, name: &'a str) -> Option<ir::Value> {
         match (self.items.get(name), self.parent) {
             (Some(value), _) => Some(*value),
             (_, Some(parent)) => parent.get(name),
@@ -38,11 +38,11 @@ fn lower_item<'a>(ast: ast::Item<'a>, bump: &'a bumpalo::Bump) -> ir::Item<'a> {
     let mut body = Vec::new_in(bump);
     body.push(ir::BB {
         body: Vec::new_in(bump),
-        term: ir::Terminator::Return(ir::Value::Arg(0)),
+        term: ir::Terminator::Return(ir::Value(-1)),
     });
     let mut to = ir::Item { name: &ast.name, body };
     for (i, param) in ast.params.iter().enumerate() {
-        env.insert(param.name, ir::Value::Arg(i));
+        env.insert(param.name, ir::Value(-((i + 1) as i32)));
     }
 
     let ret = lower_expr(&mut to, &mut env, ast.body, bump);
@@ -50,12 +50,18 @@ fn lower_item<'a>(ast: ast::Item<'a>, bump: &'a bumpalo::Bump) -> ir::Item<'a> {
     to
 }
 
+fn push<'a>(to: &'_ mut ir::Item<'a>, instr: ir::Instr<'a>) -> ir::Value {
+    let bb = to.body.last_mut().unwrap();
+    bb.body.push(instr);
+    ir::Value((bb.body.len() - 1) as i32)
+}
+
 fn lower_expr<'a>(
     to: &mut ir::Item<'a>, env: &mut Env<'_, 'a>, ast: ast::Expr<'a>,
     bump: &'a bumpalo::Bump,
-) -> ir::Value<'a> {
+) -> ir::Value {
     match ast {
-        ast::Expr::Unit => lower_unit(to, bump),
+        ast::Expr::Unit => lower_unit(to),
         ast::Expr::Block { body, result } => {
             lower_block(to, env, body, result, bump)
         }
@@ -65,18 +71,14 @@ fn lower_expr<'a>(
     }
 }
 
-fn lower_unit<'a>(
-    to: &'_ mut ir::Item<'a>, bump: &'a bumpalo::Bump,
-) -> ir::Value<'a> {
-    let instr = &*bump.alloc(ir::Instr::Lit);
-    to.body.last_mut().unwrap().body.push(instr);
-    ir::Value::Instr(instr)
+fn lower_unit<'a>(to: &'_ mut ir::Item<'a>) -> ir::Value {
+    push(to, ir::Instr::Lit)
 }
 
 fn lower_let<'a>(
     to: &'_ mut ir::Item<'a>, env: &mut Env<'_, 'a>, name: &'a str,
     init: ast::Expr<'a>, bump: &'a bumpalo::Bump,
-) -> ir::Value<'a> {
+) -> ir::Value {
     let value = lower_expr(to, env, init, bump);
     env.insert(name, value);
     value
@@ -85,20 +87,18 @@ fn lower_let<'a>(
 fn lower_app<'a>(
     to: &'_ mut ir::Item<'a>, env: &mut Env<'_, 'a>, func: ast::Expr<'a>,
     args: &'a [ast::Expr<'a>], bump: &'a bumpalo::Bump,
-) -> ir::Value<'a> {
+) -> ir::Value {
     let func = lower_expr(to, env, func, bump);
     let args = &*bump.alloc_slice_fill_iter(
         args.iter().map(|&arg| lower_expr(to, env, arg, bump)),
     );
-    let instr = &*bump.alloc(ir::Instr::App { func, args });
-    to.body.last_mut().unwrap().body.push(instr);
-    ir::Value::Instr(instr)
+    push(to, ir::Instr::App { func, args })
 }
 
 fn lower_block<'a>(
     to: &'_ mut ir::Item<'a>, env: &mut Env<'_, 'a>, body: &'a [ast::Expr<'a>],
     result: Option<&'a ast::Expr<'a>>, bump: &'a bumpalo::Bump,
-) -> ir::Value<'a> {
+) -> ir::Value {
     let mut env = env.push();
     for &expr in body {
         lower_expr(to, &mut env, expr, bump);
@@ -107,6 +107,6 @@ fn lower_block<'a>(
     if let Some(&result) = result {
         lower_expr(to, &mut env, result, bump)
     } else {
-        lower_unit(to, bump)
+        lower_unit(to)
     }
 }
