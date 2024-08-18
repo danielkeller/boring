@@ -83,9 +83,11 @@ fn lower_expr<'a>(
 ) -> ir::Value {
     match ast {
         ast::Expr::Unit => lower_unit(to),
-        ast::Expr::Block { body, result } => {
-            lower_block(to, env, body, result, bump)
+        ast::Expr::Stmt(expr) => {
+            lower_expr(to, env, *expr, bump);
+            lower_unit(to)
         }
+        ast::Expr::Block(body) => lower_block(to, env, body, bump),
         ast::Expr::Let { name, init } => lower_let(to, env, name, *init, bump),
         ast::Expr::Var(name) => env.get(name).expect("undeclared variable"),
         ast::Expr::App { func, args } => lower_app(to, env, *func, args, bump),
@@ -175,15 +177,14 @@ fn lower_if<'a>(
 
 fn lower_block<'a>(
     to: &'_ mut ir::Item<'a>, env: &mut Env<'_, 'a>, body: &'a [ast::Expr<'a>],
-    result: Option<&'a ast::Expr<'a>>, bump: &'a bumpalo::Bump,
+    bump: &'a bumpalo::Bump,
 ) -> ir::Value {
     let mut env = env.push();
-    for &expr in body {
-        lower_expr(to, &mut env, expr, bump);
-    }
-
-    if let Some(&result) = result {
-        lower_expr(to, &mut env, result, bump)
+    if let [body @ .., result] = body {
+        for &expr in body {
+            lower_expr(to, &mut env, expr, bump);
+        }
+        lower_expr(to, &mut env, *result, bump)
     } else {
         lower_unit(to)
     }

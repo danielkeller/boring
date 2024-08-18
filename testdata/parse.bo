@@ -9,5 +9,5 @@ fn foo['a, T](bar: &'a T, i: bool) -> i32 {
         a()
     } else {
         ()
-    }
+    };
 }

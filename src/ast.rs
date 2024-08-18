@@ -37,7 +37,8 @@ pub enum Type<'a> {
 #[derive(Debug, Clone, Copy)]
 pub enum Expr<'a> {
     Unit,
-    Block { body: &'a [Expr<'a>], result: Option<&'a Expr<'a>> },
+    Block(&'a [Expr<'a>]),
+    Stmt(&'a Expr<'a>),
     Let { name: &'a str, init: &'a Expr<'a> },
     Var(&'a str),
     App { func: &'a Expr<'a>, args: &'a [Expr<'a>] },
@@ -91,17 +92,15 @@ impl Display for Expr<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Expr::Unit => f.write_str("()"),
-            Expr::Block { body, result: None } => {
+            Expr::Block(body) => {
                 f.write_str("{\n")?;
-                write_block_body(body, f)?;
+                for stmt in *body {
+                    write!(f, "    {stmt}\n")?;
+                }
                 f.write_str("}")
             }
-            Expr::Block { body, result: Some(result) } => {
-                f.write_str("{\n")?;
-                write_block_body(body, f)?;
-                write!(f, "    {result}\n}}")
-            }
-            Expr::Let { name, init } => write!(f, "let {name} = {init}"),
+            Expr::Stmt(expr) => write!(f, "{expr};\n"),
+            Expr::Let { name, init } => write!(f, "let {name} = {init};"),
             Expr::Var(name) => f.write_str(name),
             Expr::App { func, args } => write!(f, "{func}({})", Commas(*args)),
             Expr::If { cond, yes, no: None } => {

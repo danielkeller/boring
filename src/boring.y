@@ -46,13 +46,12 @@ return_type -> Type<'input>
     ;
 
 block -> Expr<'input>
-    : "{" stmts "}" { Expr::Block { body: slice($2), result: None } }
-    | "{" stmts expr_without_block "}" {
-        Expr::Block {
-            body: slice($2),
-            result: Some(bump.alloc($3)),
-        } 
-    }
+    : "{" block_body "}" { Expr::Block(slice($2)) }
+    ;
+
+block_body -> Vec<'input, Expr<'input>>
+    : stmts { $1 }
+    | stmts expr_without_block { $1.push($2); $1 }
     ;
 stmts -> Vec<'input, Expr<'input>>
     : { vec![in bump] }
@@ -62,7 +61,7 @@ stmts -> Vec<'input, Expr<'input>>
 stmt -> Expr<'input>
     : let ";" { $1 }
     | expr_with_block { $1 }
-    | expr_without_block ";" { $1 }
+    | expr ";" { Expr::Stmt(bump.alloc($1)) }
     ;
 
 let -> Expr<'input>
