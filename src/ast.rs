@@ -35,13 +35,19 @@ pub enum Type<'a> {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub enum Ref {
+    Ref,
+    Mut,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub enum Expr<'a> {
     Unit,
     Block(&'a [Expr<'a>]),
     Stmt(&'a Expr<'a>),
     Let { name: &'a str, init: &'a Expr<'a> },
     Var(&'a str),
-    Ref(&'a Expr<'a>),
+    Ref(Ref, &'a Expr<'a>),
     // Deref(&'a Expr<'a>),
     App { func: &'a Expr<'a>, args: &'a [Expr<'a>] },
     If { cond: &'a Expr<'a>, yes: &'a Expr<'a>, no: Option<&'a Expr<'a>> },
@@ -107,7 +113,8 @@ impl Display for Expr<'_> {
             Expr::Stmt(expr) => write!(f, "{expr};\n"),
             Expr::Let { name, init } => write!(f, "let {name} = {init};"),
             Expr::Var(name) => f.write_str(name),
-            Expr::Ref(expr) => write!(f, "&{expr}"),
+            Expr::Ref(Ref::Ref, expr) => write!(f, "&{expr}"),
+            Expr::Ref(Ref::Mut, expr) => write!(f, "&mut {expr}"),
             // Expr::Deref(expr) => write!(f, "{expr}.*"),
             Expr::App { func, args } => write!(f, "{func}({})", Commas(*args)),
             Expr::If { cond, yes, no: None } => {

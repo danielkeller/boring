@@ -107,12 +107,14 @@ while_expr -> Expr<'input>
 
 prefix_expr -> Expr<'input>
     : postfix_expr { $1 }
-    | "&" prefix_expr { Expr::Ref(bump.alloc($2)) }
+    | "&" prefix_expr { Expr::Ref(Ref::Ref, bump.alloc($2)) }
+    | "&" "mut" prefix_expr { Expr::Ref(Ref::Mut, bump.alloc($3)) }
     ;
 
 postfix_expr -> Expr<'input>
     : prim_expr { $1 }
     | postfix_expr call_args { Expr::App { func: bump.alloc($1), args: $2 } }
+    // "!" as postfix deref?
     ;
 
 call_args -> &'input [Expr<'input>]

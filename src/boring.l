@@ -1,6 +1,7 @@
 %%
 fn "fn"
 let "let"
+mut "mut"
 if "if"
 else "else"
 while "while"

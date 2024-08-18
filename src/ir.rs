@@ -47,9 +47,15 @@ pub struct BB<'a> {
 pub struct Value(pub i32);
 
 #[derive(Debug, Clone, Copy)]
+pub enum Ref {
+    Ref,
+    Mut,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub enum Instr<'a> {
     Lit, // Unit for now
-    Ref(Value),
+    Ref(Ref, Value),
     App { func: Value, args: &'a [Value] },
 }
 
@@ -130,7 +136,8 @@ impl Display for Instr<'_> {
             &Instr::App { func, args } => {
                 write!(f, "{func}({})", Commas(args))
             }
-            Instr::Ref(v) => write!(f, "&{v}"),
+            Instr::Ref(Ref::Ref, v) => write!(f, "& {v}"),
+            Instr::Ref(Ref::Mut, v) => write!(f, "&mut {v}"),
         }
     }
 }
