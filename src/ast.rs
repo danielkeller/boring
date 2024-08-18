@@ -43,6 +43,7 @@ pub enum Expr<'a> {
     Var(&'a str),
     App { func: &'a Expr<'a>, args: &'a [Expr<'a>] },
     If { cond: &'a Expr<'a>, yes: &'a Expr<'a>, no: Option<&'a Expr<'a>> },
+    While { cond: &'a Expr<'a>, body: &'a Expr<'a> },
 }
 
 impl Display for Module<'_> {
@@ -108,6 +109,9 @@ impl Display for Expr<'_> {
             }
             Expr::If { cond, yes, no: Some(no) } => {
                 write!(f, "if {cond} {{\n{yes}\n}} else {{\n{no}\n}}")
+            }
+            Expr::While { cond, body } => {
+                write!(f, "while {cond} {{\n{body}\n}}")
             }
         }
     }

@@ -94,6 +94,9 @@ fn lower_expr<'a>(
         ast::Expr::If { cond, yes, no } => {
             lower_if(to, env, cond, yes, no, bump)
         }
+        ast::Expr::While { cond, body } => {
+            lower_while(to, env, cond, body, bump)
+        }
     }
 }
 
@@ -173,6 +176,34 @@ fn lower_if<'a>(
 
         lower_unit(to)
     }
+}
+
+fn lower_while<'a>(
+    to: &'_ mut ir::Item<'a>, env: &mut Env<'_, 'a>, cond: &'a ast::Expr,
+    body: &'a ast::Expr, bump: &'a bumpalo::Bump,
+) -> ir::Value {
+    let enter = label(to);
+    new_bb(to, 0, label(to), bump);
+    let cond_enter = label(to);
+    let cond = lower_expr(to, env, *cond, bump);
+    let cond_exit = label(to);
+    new_bb(to, 0, cond_exit, bump);
+    let body_enter = label(to);
+    lower_expr(to, env, *body, bump);
+    let body_exit = label(to);
+    new_bb(to, 0, cond_exit, bump);
+    let exit = label(to);
+
+    let yes_jmp = ir::Jmp { to: body_enter, args: &[] };
+    let no_jmp = ir::Jmp { to: exit, args: &[] };
+    to.body[enter].term =
+        ir::Terminator::Jmp(ir::Jmp { to: cond_enter, args: &[] });
+    to.body[cond_exit].term =
+        ir::Terminator::Switch(cond, bump.alloc_slice_copy(&[no_jmp, yes_jmp]));
+    to.body[body_exit].term =
+        ir::Terminator::Jmp(ir::Jmp { to: cond_enter, args: &[] });
+
+    lower_unit(to)
 }
 
 fn lower_block<'a>(

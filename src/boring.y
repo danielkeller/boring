@@ -74,6 +74,7 @@ expr -> Expr<'input>
 
 expr_with_block -> Expr<'input>
     : if_expr { $1 }
+    | while_expr { $1 }
     ;
 
 expr_without_block -> Expr<'input>
@@ -96,6 +97,12 @@ if_expr -> Expr<'input>
 else_branch -> Expr<'input>
     : if_expr { $1 }
     | block { $1 }
+    ;
+
+while_expr -> Expr<'input>
+    : "while" expr block { 
+        Expr::While { cond: bump.alloc($2), body: bump.alloc($3) }
+    }
     ;
 
 call_expr -> Expr<'input>
