@@ -78,7 +78,7 @@ expr_with_block -> Expr<'input>
     ;
 
 expr_without_block -> Expr<'input>
-    : call_expr { $1 }
+    : prefix_expr { $1 }
     ;
 
 if_expr -> Expr<'input>
@@ -105,10 +105,16 @@ while_expr -> Expr<'input>
     }
     ;
 
-call_expr -> Expr<'input>
-    : prim_expr { $1 }
-    | prim_expr call_args { Expr::App { func: bump.alloc($1), args: $2 } }
+prefix_expr -> Expr<'input>
+    : postfix_expr { $1 }
+    | "&" prefix_expr { Expr::Ref(bump.alloc($2)) }
     ;
+
+postfix_expr -> Expr<'input>
+    : prim_expr { $1 }
+    | postfix_expr call_args { Expr::App { func: bump.alloc($1), args: $2 } }
+    ;
+
 call_args -> &'input [Expr<'input>]
     : "(" ")" { &[] }
     | "(" args ")" { slice($2) }

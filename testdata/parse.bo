@@ -1,5 +1,5 @@
 fn foo['a, T](bar: &'a T, i: bool) -> i32 {
-    let baf = ();
+    let baf = &bar;
     if i {
         let a = baf(bar);
         while a() {
@@ -8,6 +8,6 @@ fn foo['a, T](bar: &'a T, i: bool) -> i32 {
         }
         a()
     } else {
-        ()
+        &()
     }
 }

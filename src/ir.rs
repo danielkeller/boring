@@ -49,6 +49,7 @@ pub struct Value(pub i32);
 #[derive(Debug, Clone, Copy)]
 pub enum Instr<'a> {
     Lit, // Unit for now
+    Ref(Value),
     App { func: Value, args: &'a [Value] },
 }
 
@@ -129,6 +130,7 @@ impl Display for Instr<'_> {
             &Instr::App { func, args } => {
                 write!(f, "{func}({})", Commas(args))
             }
+            Instr::Ref(v) => write!(f, "&{v}"),
         }
     }
 }

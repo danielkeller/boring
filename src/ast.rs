@@ -41,10 +41,14 @@ pub enum Expr<'a> {
     Stmt(&'a Expr<'a>),
     Let { name: &'a str, init: &'a Expr<'a> },
     Var(&'a str),
+    Ref(&'a Expr<'a>),
+    // Deref(&'a Expr<'a>),
     App { func: &'a Expr<'a>, args: &'a [Expr<'a>] },
     If { cond: &'a Expr<'a>, yes: &'a Expr<'a>, no: Option<&'a Expr<'a>> },
     While { cond: &'a Expr<'a>, body: &'a Expr<'a> },
 }
+
+// You could use for ... else to make loops return a value
 
 impl Display for Module<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -103,6 +107,8 @@ impl Display for Expr<'_> {
             Expr::Stmt(expr) => write!(f, "{expr};\n"),
             Expr::Let { name, init } => write!(f, "let {name} = {init};"),
             Expr::Var(name) => f.write_str(name),
+            Expr::Ref(expr) => write!(f, "&{expr}"),
+            // Expr::Deref(expr) => write!(f, "{expr}.*"),
             Expr::App { func, args } => write!(f, "{func}({})", Commas(*args)),
             Expr::If { cond, yes, no: None } => {
                 write!(f, "if {cond} {{\n{yes}\n}}")

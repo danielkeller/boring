@@ -90,6 +90,7 @@ fn lower_expr<'a>(
         ast::Expr::Block(body) => lower_block(to, env, body, bump),
         ast::Expr::Let { name, init } => lower_let(to, env, name, *init, bump),
         ast::Expr::Var(name) => env.get(name).expect("undeclared variable"),
+        ast::Expr::Ref(ast) => lower_ref(to, env, *ast, bump),
         ast::Expr::App { func, args } => lower_app(to, env, *func, args, bump),
         ast::Expr::If { cond, yes, no } => {
             lower_if(to, env, cond, yes, no, bump)
@@ -122,6 +123,14 @@ fn lower_app<'a>(
         args.iter().map(|&arg| lower_expr(to, env, arg, bump)),
     );
     push(to, ir::Instr::App { func, args })
+}
+
+fn lower_ref<'a>(
+    to: &'_ mut ir::Item<'a>, env: &mut Env<'_, 'a>, ast: ast::Expr<'a>,
+    bump: &'a bumpalo::Bump,
+) -> ir::Value {
+    let value = lower_expr(to, env, ast, bump);
+    push(to, ir::Instr::Ref(value))
 }
 
 fn lower_if<'a>(
